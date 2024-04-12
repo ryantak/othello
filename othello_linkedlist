@@ -1,0 +1,259 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define SIZE 8
+
+// 오셀로 게임 보드의 각 셀을 나타내는 구조체
+typedef struct Cell {
+    char color; // 'B' for black, 'W' for white, 'E' for empty
+    struct Cell *right;
+} Cell;
+
+// 오셀로 게임 보드를 나타내는 구조체
+typedef struct {
+    Cell *topLeft; // 왼쪽 상단 셀
+} Board;
+
+char findcolor(Board *board, int row, int col);
+Cell* findcell(Board *board, int row, int col);
+
+
+void initializeBoard(Board *board); // 보드 초기화 함수
+void printBoard(Board *board); // 보드 출력 함수
+void freeBoard(Board *board); // 보드 메모리 해제 함수
+bool isValidMove(Board *board, int row, int col, char color);
+// 입력 받은 위치 가능한 위치인지 검사
+bool makeMove(Board* board, int row, int col, char color);
+// 입력받은 돌과 돌 뒤집혀야하는 주위 돌들 보드에 업데이트
+
+
+char findcolor(Board *board, int row, int col) {
+    Cell *current = board->topLeft->right;
+    
+    // Move to the specified row
+    for (int i = 0; i < row * SIZE; ++i) {
+        current = current->right;
+    }
+
+    // Move to the specified column
+    for (int j = 0; j < col; ++j) {
+        current = current->right;
+    }
+
+    return current->color;
+}
+
+Cell* findcell(Board *board, int row, int col) {
+    Cell *current = board->topLeft->right;
+    
+    // Move to the specified row
+    for (int i = 0; i < row * SIZE; ++i) {
+        current = current->right;
+    }
+
+    // Move to the specified column
+    for (int j = 0; j < col; ++j) {
+        current = current->right;
+    }
+
+    return current;
+}
+// 오셀로 게임 보드 초기화
+void initializeBoard(Board *board) {
+    board->topLeft = (Cell *)malloc(sizeof(Cell));
+    Cell *current = board->topLeft;
+    Cell *temp;
+    for (int i = 0; i < SIZE; ++i) {
+            for (int j = 0; j < SIZE; ++j) {
+            temp = (Cell *)malloc(sizeof(Cell));
+            temp->color = ' ';
+            temp->right = NULL;
+            if ((i == 3 && j == 3) || (i == 4 && j == 4)) {
+                temp->color = 'W'; // 흰돌 초기화
+            } else if ((i == 3 && j == 4) || (i == 4 && j == 3)) {
+                temp->color = 'B'; // 검은돌 초기화
+            }
+            current->right = temp;
+            current = current->right;
+        }
+    }
+}
+
+// 게임 보드 출력
+void printBoard(Board *board) {
+    Cell *row = board->topLeft;
+    Cell *current = row->right;
+    printf("  0 1 2 3 4 5 6 7\n");
+    printf(" +-+-+-+-+-+-+-+-+\n");
+    for(int i=0;i<SIZE;i++){
+         printf("%d|", i);
+        for(int j=0;j<SIZE;j++){
+            printf("%c|", current->color);
+            current = current->right;
+        }
+        printf("\n +-+-+-+-+-+-+-+-+\n");
+    }
+        
+    }
+
+
+// 메모리 해제
+void freeBoard(Board *board) {
+    Cell *current = board->topLeft->right;
+    Cell *temp;
+    for(int i=0;i<SIZE;i++){
+        for(int j=0;j<SIZE;j++){
+            temp=current;
+            free(temp);
+            current = current->right;
+        }
+    }
+}
+
+    
+bool isValidMove(Board *board, int row, int col, char color) {
+
+    char cellcol=findcolor(board,row,col);
+    
+    if (cellcol != ' ') {
+        return false;
+    }
+    
+    int directions[8][2] = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
+
+    char opponentColor = (color == 'W') ? 'B' : 'W';
+  
+    for (int d = 0; d < 8; d++) {
+        int dr = directions[d][0];
+        int dc = directions[d][1];
+        int r = row + dr;
+        int c = col + dc;
+        if (r >= 0 && r < SIZE && c >= 0 && c < SIZE && findcolor(board,r,c) == opponentColor) {
+            
+            r += dr;
+            c += dc;
+            while (r >= 0 && r < SIZE && c >= 0 && c < SIZE) {
+                if (findcolor(board,r,c) == ' ') {
+                   
+                    break;
+                }
+                if (findcolor(board,r,c) == color) {
+                    return true;
+                }
+                r += dr;
+                c += dc;
+            }
+        }
+    }
+    return false;
+}
+
+bool makeMove(Board* board, int row, int col, char color) {
+
+    if (!isValidMove(board, row, col, color)) {
+        return false;
+    }
+  
+    Cell* temp;
+    temp=findcell(board,row,col);
+    temp->color= color;
+    int directions[8][2] = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
+    char opponentColor = (color == 'W') ? 'B' : 'W';
+    
+    for (int d = 0; d < 8; d++) {
+        int dr = directions[d][0];
+        int dc = directions[d][1];
+        int r = row + dr;
+        int c = col + dc;
+        if (r >= 0 && r < SIZE && c >= 0 && c < SIZE && findcolor(board,r,c) == opponentColor) {
+            r += dr;
+            c += dc;
+            while (r >= 0 && r < SIZE && c >= 0 && c < SIZE) {
+                if (findcolor(board,r,c) == ' ') {
+                    break;
+                }
+                if (findcolor(board,r,c) == color) {
+                    int tr = row + dr;
+                    int tc = col + dc;
+                    while (tr != r || tc != c) {
+                        temp=findcell(board,tr,tc);
+                        temp->color = color;
+                        tr += dr;
+                        tc += dc;
+                    }
+                    break;
+                }
+                r += dr;
+                c += dc;
+            }
+        }
+    }
+    return true;
+}
+
+int main() {
+    Board board;
+    char currentPlayer = 'B';
+    initializeBoard(&board);
+    bool gameover = false;
+    int tim=0;
+    clock_t st, et;
+
+    while (!gameover) {
+        printBoard(&board);
+        printf("Player %c's turn\n", currentPlayer);
+
+        int row, col;
+        printf("Enter row and column (e.g., 2 3): ");
+        scanf("%d %d", &row, &col);
+        if(tim==0){ st = clock(); tim++;}
+        if (row >= 0 && row < SIZE && col >= 0 && col < SIZE) {
+            if (makeMove(&board, row, col, currentPlayer)) {
+                currentPlayer = (currentPlayer == 'W') ? 'B' : 'W';
+            } else {
+                printf("Invalid move. Try again.\n");
+            }
+        } else {
+            printf("Invalid input. Try again.\n");
+        }
+
+        // 게임 종료 조건 - 모든 칸이 채워질 때
+        gameover = true;
+        for (int i = 0; i < SIZE; i++) {
+            for (int j = 0; j < SIZE; j++) {
+                if (findcolor(&board,i,j) == ' ') {
+                    gameover = false;
+                    break;
+                }
+            }
+            if (!gameover) {
+                break;
+            }
+        }
+    }
+    int white=0;
+    int black=0;
+    for(int i=0;i<SIZE;i++){
+        for(int j=0;j<SIZE;j++){
+            if(findcolor(&board,i,j)=='W'){
+                white++;
+            }
+            else if(findcolor(&board,i,j)=='B'){black++;}
+        }
+    }
+    printf("Game over!\n");
+    if(black>white){printf("Winner is Black!\n");}
+    else if(black == white) {printf("Tie!\n");}
+    else {printf("Winner is White!\n");}
+   
+    et = clock();
+
+    printf("%d ms", et - st); 
+
+    freeBoard(&board);
+
+
+    return 0;
+}
+
